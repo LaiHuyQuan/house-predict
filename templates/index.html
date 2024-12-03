@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CSV Data Viewer</title>
+    <style>
+      body {
+        padding: 30px;
+        font-family: Arial, sans-serif;
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+      }
+      table,
+      th,
+      td {
+        border: 1px solid black;
+      }
+      th,
+      td {
+        padding: 8px;
+        text-align: left;
+      }
+      th {
+        background-color: #f2f2f2;
+      }
+      .controls {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 20px;
+        align-items: center;
+      }
+      .controls .page-input {
+        display: flex;
+        align-items: center;
+      }
+      .controls .page-input input {
+        width: 60px;
+        padding: 5px;
+        margin-right: 10px;
+      }
+      .pagination {
+        display: flex;
+        gap: 5px;
+      }
+      .pagination button {
+        padding: 8px 16px;
+        border: 1px solid #ccc;
+        background-color: #f9f9f9;
+        cursor: pointer;
+      }
+      .pagination button.active {
+        background-color: #007bff;
+        color: white;
+        border: 1px solid #007bff;
+      }
+      .pagination button:hover:not(.active) {
+        background-color: #ddd;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>CSV Data Viewer</h1>
+    <div id="table-container"></div>
+    <div class="controls">
+      <div class="page-input">
+        <input type="number" id="page-number" min="1" placeholder="Page #" />
+        <button onclick="jumpToPage()">Go</button>
+      </div>
+      <div class="pagination" id="pagination"></div>
+    </div>
+
+    <script>
+            // Dữ liệu được gửi từ Flask
+            const data = {{ data|tojson }};
+            const columns = {{ columns|tojson }};
+            const rowsPerPage = 50;
+            let currentPage = 1;
+
+            // Hàm hiển thị bảng
+            function displayTable(page) {
+                const start = (page - 1) * rowsPerPage;
+                const end = start + rowsPerPage;
+                const paginatedData = data.slice(start, end);
+
+                // Tạo bảng
+                let tableHTML = '<table>';
+                tableHTML += '<thead><tr>';
+                columns.forEach(col => {
+                    tableHTML += `<th>${col}</th>`;
+                });
+                tableHTML += '<th>Actions</th>'; // Cột nút bấm
+                tableHTML += '</tr></thead><tbody>';
+
+                paginatedData.forEach(row => {
+                    tableHTML += '<tr>';
+                    columns.forEach(col => {
+                        tableHTML += `<td>${row[col]}</td>`;
+                    });
+                    tableHTML += `
+                        <td>
+          <button onclick="viewLocation(${row.latitude}, ${row.longitude})">View</button>
+          <button onclick="redirectToPredict(${row.longitude}, ${row.latitude}, ${row.housing_median_age}, ${row.total_rooms}, ${row.total_bedrooms}, ${row.population}, ${row.households}, ${row.median_income}, '${row.ocean_proximity}', '${row.median_house_value}')">Predict</button>
+      </td>
+
+                    `;
+                    tableHTML += '</tr>';
+                });
+
+                tableHTML += '</tbody></table>';
+                document.getElementById('table-container').innerHTML = tableHTML;
+            }
+
+            // Hàm mở Google Maps với kinh độ và vĩ độ
+            function viewLocation(lat, lng) {
+                if (!lat || !lng) {
+                    alert('Location not available!');
+                    return;
+                }
+                const url = `https://www.google.com/maps?q=${lat},${lng}`;
+                window.open(url, '_blank');
+            }
+
+            // Hàm xử lý Predict (tùy chỉnh logic tại đây)
+            function predict(id) {
+                alert(`Predict function called for ID: ${id}`);
+            }
+
+            function redirectToPredict(longitude, latitude, housing_median_age, total_rooms, total_bedrooms, population, households, median_income, ocean_proximity, median_house_value) {
+              // Chuyển đổi giá trị ocean_proximity thành số tương ứng
+              let proximityValue;
+              switch(ocean_proximity) {
+                  case 'OCEAN':
+                      proximityValue = '0';
+                      break;
+                  case 'INLAND':
+                      proximityValue = '1';
+                      break;
+                  case 'ISLAND':
+                      proximityValue = '2';
+                      break;
+                  case 'NEAR BAY':
+                      proximityValue = '3';
+                      break;
+                  case 'NEAR OCEAN':
+                      proximityValue = '4';
+                      break;
+                  default:
+                      proximityValue = ''; // Nếu không khớp với bất kỳ giá trị nào
+              }
+
+              // Tạo các tham số URL
+              const params = new URLSearchParams({
+                  longitude,
+                  latitude,
+                  housing_median_age,
+                  total_rooms,
+                  total_bedrooms,
+                  population,
+                  households,
+                  median_income,
+                  proximity: proximityValue,
+                  median_house_value
+              });
+
+              // Chuyển hướng đến trang /predict với các tham số
+              window.location.href = `/predict?${params.toString()}`;
+          }
+
+
+
+            // Hàm hiển thị thanh số trang dạng thu gọn
+            function displayPagination() {
+                const totalPages = Math.ceil(data.length / rowsPerPage);
+                let paginationHTML = '';
+
+                const visiblePages = 5; // Hiển thị tối đa 5 trang gần đó
+                const startPage = Math.max(1, currentPage - Math.floor(visiblePages / 2));
+                const endPage = Math.min(totalPages, startPage + visiblePages - 1);
+
+                if (startPage > 1) {
+                    paginationHTML += `<button onclick="changePage(1)">1</button>`;
+                    if (startPage > 2) paginationHTML += `<span>...</span>`;
+                }
+
+                for (let i = startPage; i <= endPage; i++) {
+                    paginationHTML += `<button class="${i === currentPage ? 'active' : ''}" onclick="changePage(${i})">${i}</button>`;
+                }
+
+                if (endPage < totalPages) {
+                    if (endPage < totalPages - 1) paginationHTML += `<span>...</span>`;
+                    paginationHTML += `<button onclick="changePage(${totalPages})">${totalPages}</button>`;
+                }
+
+                document.getElementById('pagination').innerHTML = paginationHTML;
+            }
+
+            // Hàm thay đổi trang
+            function changePage(page) {
+                currentPage = page;
+                displayTable(currentPage);
+                displayPagination();
+            }
+
+            // Hàm nhảy đến một trang cụ thể
+            function jumpToPage() {
+                const pageInput = document.getElementById('page-number');
+                const page = parseInt(pageInput.value);
+                const totalPages = Math.ceil(data.length / rowsPerPage);
+
+                if (!isNaN(page) && page >= 1 && page <= totalPages) {
+                    changePage(page);
+                } else {
+                    alert(`Please enter a valid page number (1 - ${totalPages}).`);
+                }
+
+                pageInput.value = ''; // Reset input
+            }
+
+            // Hiển thị bảng và thanh số trang ban đầu
+            displayTable(currentPage);
+            displayPagination();
+    </script>
+  </body>
+</html>
