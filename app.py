@@ -107,7 +107,7 @@ def predict():
                 households='',
                 income='',
                 proximity='',
-                median_house_value='',
+                median_house_value='0',
                 result=None,
                 error_value=None
             )
