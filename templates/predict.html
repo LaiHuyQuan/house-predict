@@ -14,7 +14,7 @@
 
     <!-- Form Container -->
 <div class="container mt-4 p-4" style="background:#0dd99c; color:white; border-radius:20px;">
-  <form action="/house" method="post">
+  <form action="/predict" method="post">
     <h3 class="text-center mb-4">Fill in the Details</h3>
 
     <!-- Longitude and Latitude -->
@@ -103,7 +103,8 @@
     <!-- Submit Button -->
     <div class="row">
       <div class="col-12 text-center">
-        <button type="submit" class="btn btn-primary btn-lg">Predict</button>
+        <button type="submit" name="action" value="clear" class="btn btn-primary btn-lg" >Clear</button>
+        <button type="submit" name="action" value="predict" class="btn btn-primary btn-lg">Predict</button>
       </div>
     </div>
   </form>
